@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: oliva-clinic-frontend
+    runtime: static
+    buildCommand: flutter build web --release
+    staticPublishPath: ./build/web
+    envVars:
+      - key: FLUTTER_VERSION
+        value: 3.24.0 
