@@ -2,22 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "main_simple.py",
-      "use": "@vercel/python",
-      "config": {
-        "runtime": "python3.11"
-      }
+      "src": "app.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "main_simple.py"
+      "dest": "app.py"
     }
-  ],
-  "functions": {
-    "main_simple.py": {
-      "runtime": "python3.11"
-    }
-  }
+  ]
 } 
