@@ -1,0 +1,23 @@
+services:
+  # Backend Service
+  - type: web
+    name: oliva-clinic-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    rootDir: BackendMobileAPP
+    envVars:
+      - key: SECRET_KEY
+        value: your-secret-key-here
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+
+  # Frontend Service
+  - type: web
+    name: oliva-clinic-frontend
+    runtime: static
+    buildCommand: flutter build web --release
+    staticPublishPath: build/web
+    rootDir: frontend 

@@ -31,6 +31,10 @@ app.include_router(booking_controller.router)
 app.include_router(guest_data_controller.router)
 app.include_router(payment_controller.router)
 
+@app.get("/")
+def root():
+    return {"message": "Oliva Clinic Backend API", "status": "success", "docs": "/docs"}
+
 @app.get("/test")
 def test_endpoint():
     return {"message": "Backend is working!", "status": "success"}
