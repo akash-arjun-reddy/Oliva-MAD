@@ -1,0 +1,120 @@
+name: Deploy to Render and Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # Deploy Backend to Render
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        cd BackendMobileAPP
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      run: |
+        cd BackendMobileAPP
+        python -m pytest tests/ -v
+    
+    - name: Deploy to Render
+      env:
+        RENDER_TOKEN: ${{ secrets.RENDER_TOKEN }}
+        RENDER_SERVICE_ID: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
+      run: |
+        curl -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+          -H "Authorization: Bearer $RENDER_TOKEN" \
+          -H "Content-Type: application/json"
+
+  # Deploy Frontend to Render
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        flutter pub get
+    
+    - name: Run tests
+      run: |
+        cd frontend
+        flutter test
+    
+    - name: Build web
+      run: |
+        cd frontend
+        flutter build web --release
+    
+    - name: Deploy to Render
+      env:
+        RENDER_TOKEN: ${{ secrets.RENDER_TOKEN }}
+        RENDER_SERVICE_ID: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
+      run: |
+        curl -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+          -H "Authorization: Bearer $RENDER_TOKEN" \
+          -H "Content-Type: application/json"
+
+  # Build APK
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        flutter pub get
+    
+    - name: Build APK
+      run: |
+        cd frontend
+        flutter build apk --release
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: oliva-clinic-app
+        path: frontend/build/app/outputs/flutter-apk/app-release.apk
+    
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: frontend/build/app/outputs/flutter-apk/app-release.apk
+        tag_name: v${{ github.run_number }}
+        name: Release v${{ github.run_number }}
+        body: |
+          🚀 New APK Release
+          
+          - Build Number: ${{ github.run_number }}
+          - Commit: ${{ github.sha }}
+          - Date: ${{ github.event.head_commit.timestamp }}
+          
+          📱 Download the APK from the assets below.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
