@@ -14,7 +14,7 @@ def set_environment_variables():
     os.environ["DB_HOST"] = "localhost"
     os.environ["DB_PORT"] = "5432"
     os.environ["DB_USER"] = "mobileapp"  # Your original username
-    os.environ["DB_PASSWORD"] = "123"    # Your original password
+    os.environ["DB_PASSWORD"] = os.getenv("DB_PASSWORD", "")    # Get from environment
     os.environ["DB_NAME"] = "mad_database"
     os.environ["DATABASE_URL"] = "postgresql+psycopg2://mobileapp:123@localhost:5432/mad_database"
     
@@ -22,7 +22,7 @@ def set_environment_variables():
     os.environ["ZENOTI_DATABASE_URL"] = "postgresql+psycopg2://mobileapp:123@localhost:5432/mad_database"
     
     # Application secrets
-    os.environ["SECRET_KEY"] = "your-secret-key-here-change-this-in-production"
+    os.environ["SECRET_KEY"] = os.getenv("SECRET_KEY", "")
     os.environ["ALGORITHM"] = "HS256"
     os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
     

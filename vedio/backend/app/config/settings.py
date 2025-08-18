@@ -26,7 +26,7 @@ class Settings:
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
     DB_PORT: str = os.getenv("DB_PORT", "5432")
     DB_USER: str = os.getenv("DB_USER", "mobileapp")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "123")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
     DB_NAME: str = os.getenv("DB_NAME", "mobileapp")
     DB_SCHEMA: str = os.getenv("DB_SCHEMA", "test")
     

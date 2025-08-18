@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../config/env.dart';
 import '../presentation/pages/shop_page.dart';
 
 // Shopify Product model
@@ -211,7 +212,7 @@ class ShopifyImage {
 
 class ShopifyService {
   static const String _baseUrl = 'https://oliva-clinic.myshopify.com';
-  static const String _accessToken = String.fromEnvironment('SHOPIFY_ACCESS_TOKEN', defaultValue: '');
+  static const String _accessToken = Env.shopifyAccessToken;
   static const String _apiVersion = '2023-10'; // Using a more stable API version
 
   // Test API connection

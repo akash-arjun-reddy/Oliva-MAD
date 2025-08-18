@@ -14,12 +14,12 @@ class Settings(BaseSettings):
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
     DB_PORT: str = os.getenv("DB_PORT", "5432")
     DB_USER: str = os.getenv("DB_USER", "mobileapp")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "123")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
     DB_NAME: str = os.getenv("DB_NAME", "mobileapp")
     SCHEMA: str = os.getenv("SCHEMA", "public")
     
     # JWT settings
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     ZENOTI_BASE_URL: str = os.getenv("ZENOTI_BASE_URL", "https://oliva.zenoti.com/api/v100/services/integration/collectionsapi.aspx")
     ZENOTI_API_KEY: str = os.getenv("ZENOTI_API_KEY", "")
     ZENOTI_USERNAME: str = os.getenv("ZENOTI_USERNAME", "apisetup")
-    ZENOTI_PASSWORD: str = os.getenv("ZENOTI_PASSWORD", "Password123")
+    ZENOTI_PASSWORD: str = os.getenv("ZENOTI_PASSWORD", "")
     ZENOTI_METHOD_NAME: str = os.getenv("ZENOTI_METHOD_NAME", "getCollectionsReport")
     ZENOTI_ACCOUNT_NAME: str = os.getenv("ZENOTI_ACCOUNT_NAME", "oliva")
     ZENOTI_APP_VERSION: str = os.getenv("ZENOTI_APP_VERSION", "v100")
@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     ZENOTI_DB_HOST: str = os.getenv("ZENOTI_DB_HOST", "127.0.0.1")
     ZENOTI_DB_PORT: str = os.getenv("ZENOTI_DB_PORT", "5438")
     ZENOTI_DB_USER: str = os.getenv("ZENOTI_DB_USER", "olivadev")
-    ZENOTI_DB_PASSWORD: str = os.getenv("ZENOTI_DB_PASSWORD", "One-oliva#5432")
+    ZENOTI_DB_PASSWORD: str = os.getenv("ZENOTI_DB_PASSWORD", "")
     ZENOTI_DB_NAME: str = os.getenv("ZENOTI_DB_NAME", "olivadevdb")
     ZENOTI_DB_SCHEMA: str = os.getenv("ZENOTI_DB_SCHEMA", "test")
     ZENOTI_DATABASE_URL: str = os.getenv("ZENOTI_DATABASE_URL", "postgresql+psycopg2://olivadev:One-oliva#5432@127.0.0.1:5438/olivadevdb")
