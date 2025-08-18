@@ -1,0 +1,15 @@
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=mobileapp
+DB_PASSWORD=123
+DB_NAME=mobileapp
+DB_SCHEMA=test
+
+# Email Configuration
+SENDER_EMAIL=akash.manda@olivaclinic.com
+SENDER_PASSWORD=your_app_password_here
+
+# Jitsi Configuration (Optional)
+JITSI_BASE_URL=https://meet.jit.si
+JITSI_CONFIG_PARAMS=config.prejoinPageEnabled=false&config.disableDeepLinking=true 

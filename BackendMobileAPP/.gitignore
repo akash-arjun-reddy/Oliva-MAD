@@ -1,0 +1,16 @@
+__pycache__/ 
+*.pyc 
+*.pyo 
+*.pyd 
+.env
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db 
