@@ -1,6 +1,6 @@
 import logging
-
 from database.base import Base
+from sqlalchemy.orm import relationship
 
 logger = logging.getLogger(__name__)
 
@@ -50,4 +50,13 @@ class User(Base):
 
     # Role/Permissions
     role = Column(String, nullable=True)
+    
+    # Relationships - using string references to avoid circular imports
+    sessions = relationship("UserSession", back_populates="user", lazy="dynamic")
+    session_logs = relationship("SessionLog", back_populates="user", lazy="dynamic")
+    enhanced_sessions = relationship("EnhancedUserSession", back_populates="user", lazy="dynamic")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", lazy="dynamic")
+    audit_logs = relationship("AuditLog", back_populates="user", lazy="dynamic")
+    roles = relationship("Role", secondary="user_roles", back_populates="users", lazy="dynamic")
+    user_permissions = relationship("UserPermission", foreign_keys="UserPermission.user_id", lazy="dynamic")
 

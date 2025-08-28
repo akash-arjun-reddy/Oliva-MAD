@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import uuid4
 from typing import Optional, List
 
-from config import settings
+from config.settings import settings
 from database.session import get_db
 from dto.google_auth_dto import OAuthTokenRequest, OAuthUserResponse, OAuthLogoutRequest, \
     OAuthSessionInfo
@@ -28,8 +28,8 @@ class AuthController:
     async def register_user(self, user: UserCreate):
         return self.service.register_user(user)
 
-    async def login_user(self, request_id: str, ip: str, data: LoginRequest):
-        return self.service.login_user(request_id, data, ip)
+    async def login_user(self, request_id: str, ip: str, data: LoginRequest, user_agent: str = None, device_info: str = None):
+        return self.service.login_user(request_id, data, ip, user_agent, device_info)
 
     async def request_password_reset(self, data: PasswordResetRequest):
         return self.service.request_password_reset(data)
@@ -48,6 +48,21 @@ class AuthController:
 
     async def get_oauth_sessions(self, user_id: str) -> List[OAuthSessionInfo]:
         return await self.service.get_oauth_sessions(user_id)
+    
+    async def refresh_token(self, refresh_token: str, user_id: str = None):
+        return self.service.security_service.refresh_access_token(refresh_token, user_id)
+    
+    async def revoke_token(self, refresh_token: str, user_id: str):
+        return self.service.security_service.revoke_refresh_token(refresh_token, user_id)
+    
+    async def revoke_all_sessions(self, user_id: str):
+        return self.service.security_service.revoke_all_user_sessions(user_id)
+    
+    async def get_user_sessions(self, user_id: str):
+        return self.service.security_service.get_user_sessions(user_id)
+    
+    async def get_audit_logs(self, user_id: str = None, action: str = None, limit: int = 100):
+        return self.service.security_service.get_audit_logs(user_id, action, limit)
 
 
 def get_auth_controller(service: AuthService = Depends(get_auth_service)) -> AuthController:
@@ -84,7 +99,9 @@ async def login_user(
         controller: AuthController = Depends(get_auth_controller),
 ):
     ip = get_client_ip(request)
-    return await controller.login_user(request_id, ip, data)
+    user_agent = request.headers.get("user-agent")
+    device_info = request.headers.get("x-device-info")
+    return await controller.login_user(request_id, ip, data, user_agent, device_info)
 
 
 @router.post("/request-password-reset")
@@ -101,6 +118,57 @@ async def reset_password(
         controller: AuthController = Depends(get_auth_controller),
 ):
     return await controller.reset_password(data)
+
+
+# ==================== ENHANCED SECURITY ENDPOINTS ====================
+
+@router.post("/refresh")
+async def refresh_token(
+        refresh_token: str,
+        user_id: str = None,
+        controller: AuthController = Depends(get_auth_controller),
+):
+    """Refresh access token using refresh token."""
+    return await controller.refresh_token(refresh_token, user_id)
+
+
+@router.post("/revoke")
+async def revoke_token(
+        refresh_token: str,
+        user_id: str,
+        controller: AuthController = Depends(get_auth_controller),
+):
+    """Revoke a specific refresh token."""
+    return await controller.revoke_token(refresh_token, user_id)
+
+
+@router.post("/revoke-all")
+async def revoke_all_sessions(
+        user_id: str,
+        controller: AuthController = Depends(get_auth_controller),
+):
+    """Revoke all sessions for a user."""
+    return await controller.revoke_all_sessions(user_id)
+
+
+@router.get("/sessions/{user_id}")
+async def get_user_sessions(
+        user_id: str,
+        controller: AuthController = Depends(get_auth_controller),
+):
+    """Get all active sessions for a user."""
+    return await controller.get_user_sessions(user_id)
+
+
+@router.get("/audit-logs")
+async def get_audit_logs(
+        user_id: str = None,
+        action: str = None,
+        limit: int = 100,
+        controller: AuthController = Depends(get_auth_controller),
+):
+    """Get audit logs with optional filtering."""
+    return await controller.get_audit_logs(user_id, action, limit)
 
 
 @router.post("/auth/oauth")

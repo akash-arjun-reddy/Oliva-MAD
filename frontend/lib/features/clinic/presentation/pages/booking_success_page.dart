@@ -14,7 +14,6 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Top half: background image fills the space
@@ -35,65 +34,77 @@ class _BookingSuccessPageState extends State<BookingSuccessPage> {
               ],
             ),
           ),
-          // Bottom half: treatment cards
+          // Bottom half: treatment cards with gradient background
           Expanded(
             flex: 1,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Hello Mivan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Let us know how we can assist you',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _treatmentCard(
-                        selected: _selectedTreatment == 'skin',
-                        icon: 'assets/images/skin_icon.png',
-                        label: 'Skin Treatment',
-                        onTap: () {
-                          setState(() => _selectedTreatment = 'skin');
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const NewDashboardPage()),
-                          );
-                        },
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFE6F7FA), // Light teal
+                    Color(0xFFF0F9F6), // Very light green
+                  ],
+                ),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Hello Mivan',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(width: 18),
-                      _treatmentCard(
-                        selected: _selectedTreatment == 'hair',
-                        icon: 'assets/images/hair_icon.png',
-                        label: 'Hair Treatment',
-                        onTap: () {
-                          setState(() => _selectedTreatment = 'hair');
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const NewDashboardPage()),
-                          );
-                        },
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Let us know how we can assist you',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                ],
+                    ),
+                    const SizedBox(height: 30),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _treatmentCard(
+                          selected: _selectedTreatment == 'skin',
+                          icon: 'assets/images/skin_icon.png',
+                          label: 'Skin Treatment',
+                          onTap: () {
+                            setState(() => _selectedTreatment = 'skin');
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const NewDashboardPage()),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 18),
+                        _treatmentCard(
+                          selected: _selectedTreatment == 'hair',
+                          icon: 'assets/images/hair_icon.png',
+                          label: 'Hair Treatment',
+                          onTap: () {
+                            setState(() => _selectedTreatment = 'hair');
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const NewDashboardPage()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
           ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:frontend/core/constants/app_colors.dart';
 import 'package:frontend/core/constants/app_text_styles.dart';
+import 'package:frontend/core/services/auth_service.dart';
 import 'home_page.dart';
 import '../../../consultation/presentation/pages/doctor_selection_page.dart';
 import '../../../consultation/presentation/pages/appointments_page.dart';
@@ -24,6 +26,81 @@ class _MainDashboardState extends State<MainDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Oliva Clinic'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          Consumer<AuthService>(
+            builder: (context, authService, child) {
+              return PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'logout') {
+                    _showLogoutDialog(context, authService);
+                  } else if (value == 'profile') {
+                    _showProfileDialog(context, authService);
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  if (authService.userData != null)
+                    PopupMenuItem<String>(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundImage: authService.userData!['picture'] != null
+                                ? NetworkImage(authService.userData!['picture'])
+                                : null,
+                            child: authService.userData!['picture'] == null
+                                ? Text(authService.userData!['name']?[0] ?? 'U')
+                                : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  authService.userData!['name'] ?? 'User',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  authService.userData!['email'] ?? '',
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem<String>(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Logout', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundImage: authService.userData?['picture'] != null
+                      ? NetworkImage(authService.userData!['picture'])
+                      : null,
+                  child: authService.userData?['picture'] == null
+                      ? Text(authService.userData?['name']?[0] ?? 'U')
+                      : null,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: _pages[_selectedIndex],
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -103,6 +180,72 @@ class _MainDashboardState extends State<MainDashboard> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context, AuthService authService) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await authService.logout();
+                // The AuthWrapper will automatically navigate to login page
+              },
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showProfileDialog(BuildContext context, AuthService authService) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Profile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (authService.userData != null) ...[
+                CircleAvatar(
+                  radius: 30,
+                  backgroundImage: authService.userData!['picture'] != null
+                      ? NetworkImage(authService.userData!['picture'])
+                      : null,
+                  child: authService.userData!['picture'] == null
+                      ? Text(authService.userData!['name']?[0] ?? 'U', style: const TextStyle(fontSize: 24))
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                Text('Name: ${authService.userData!['name'] ?? 'N/A'}'),
+                const SizedBox(height: 8),
+                Text('Email: ${authService.userData!['email'] ?? 'N/A'}'),
+                const SizedBox(height: 8),
+                Text('Account Type: ${authService.userData!['is_new_user'] == true ? 'New User' : 'Existing User'}'),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

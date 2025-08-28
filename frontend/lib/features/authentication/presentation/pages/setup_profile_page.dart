@@ -151,37 +151,48 @@ class _SetupProfilePageState extends State<SetupProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              _buildHeader(),
-              const SizedBox(height: 24),
-              _buildNameInput(),
-              const SizedBox(height: 18),
-              _buildAgeInput(),
-              const SizedBox(height: 18),
-              _buildGenderSelection(),
-              const SizedBox(height: 32),
-              PrimaryButtonWidget(
-                text: 'Continue',
-                onPressed: _handleContinue,
-                height: 48,
-              ),
-              const SizedBox(height: 16),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFE6F7FA), // Light teal
+              Color(0xFFF0F9F6), // Very light green
             ],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  // Back button
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildHeader(),
+                  const SizedBox(height: 24),
+                  _buildNameInput(),
+                  const SizedBox(height: 18),
+                  _buildAgeInput(),
+                  const SizedBox(height: 18),
+                  _buildGenderSelection(),
+                  const SizedBox(height: 32),
+                  PrimaryButtonWidget(
+                    text: 'Continue',
+                    onPressed: _handleContinue,
+                    height: 48,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
           ),
         ),
       ),

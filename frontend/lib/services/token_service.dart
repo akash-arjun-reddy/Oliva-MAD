@@ -4,6 +4,7 @@ class TokenService {
   static const String _tokenKey = 'auth_token';
   static const String _tokenTypeKey = 'token_type';
   static const String _userPhoneKey = 'user_phone_number';
+  static const String _userEmailKey = 'user_email';
 
   // Save authentication token
   static Future<void> saveToken(String token, String tokenType) async {
@@ -47,12 +48,25 @@ class TokenService {
     return prefs.getString(_userPhoneKey);
   }
 
+  // Save user email
+  static Future<void> saveUserEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userEmailKey, email);
+  }
+
+  // Get user email
+  static Future<String?> getUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userEmailKey);
+  }
+
   // Clear authentication token
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_tokenTypeKey);
     await prefs.remove(_userPhoneKey);
+    await prefs.remove(_userEmailKey);
   }
 
   // Check if user is authenticated

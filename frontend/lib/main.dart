@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'core/pages/oliva_splash_page.dart';
-import 'features/authentication/presentation/pages/login_page.dart';
-import 'features/dashboard/presentation/pages/home_page.dart';
-import 'features/dashboard/presentation/pages/main_dashboard.dart';
-import 'features/authentication/presentation/pages/email_otp_page.dart';
-import 'features/consultation/routes/consultation_routes.dart';
+import 'package:provider/provider.dart';
+import 'core/services/auth_service.dart';
+import 'core/widgets/auth_wrapper.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,33 +12,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Oliva',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF667eea)),
-        useMaterial3: true,
+    return ChangeNotifierProvider(
+      create: (context) => AuthService(),
+      child: MaterialApp(
+        title: 'Oliva Clinic',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: const AuthWrapper(),
+        debugShowCheckedModeBanner: false,
       ),
-      home: const SplashToLoginFlow(),
-      routes: {
-        '/dashboard': (context) => const MainDashboard(),
-        ...ConsultationRoutes.getRoutes(),
-      },
-      onGenerateRoute: ConsultationRoutes.onGenerateRoute,
     );
-  }
-}
-
-class SplashToLoginFlow extends StatefulWidget {
-  const SplashToLoginFlow({Key? key}) : super(key: key);
-
-  @override
-  State<SplashToLoginFlow> createState() => _SplashToLoginFlowState();
-}
-
-class _SplashToLoginFlowState extends State<SplashToLoginFlow> {
-  @override
-  Widget build(BuildContext context) {
-    return const OlivaSplashPage();
   }
 }

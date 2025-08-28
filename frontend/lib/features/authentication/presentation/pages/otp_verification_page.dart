@@ -233,34 +233,45 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFE6F7FA), // Light teal
+              Color(0xFFF0F9F6), // Very light green
+            ],
+          ),
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            _buildHeader(),
-            const SizedBox(height: 32),
-            _buildOtpInput(),
-            const SizedBox(height: 24),
-            _buildResendSection(),
-            const Spacer(),
-            PrimaryButtonWidget(
-              text: 'Verify Now',
-              onPressed: _verifyOtp,
-              height: 52,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                // Back button
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const SizedBox(height: 16),
+                _buildHeader(),
+                const SizedBox(height: 32),
+                _buildOtpInput(),
+                const SizedBox(height: 24),
+                _buildResendSection(),
+                const SizedBox(height: 24),
+                PrimaryButtonWidget(
+                  text: 'Verify Now',
+                  onPressed: _verifyOtp,
+                  height: 52,
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
-            const SizedBox(height: 24),
-          ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../features/authentication/presentation/pages/introduction_page.dart';
+import '../../../features/dashboard/presentation/pages/main_dashboard.dart';
+import '../../../services/session_service.dart';
 import 'dart:async'; // Added for Timer
 
 const Color kTextDark = Color(0xFF1A4D4A);
@@ -16,6 +18,7 @@ class _OlivaSplashPageState extends State<OlivaSplashPage>
     with TickerProviderStateMixin {
   late AnimationController _zoomController;
   late AnimationController _logoController;
+  bool _isLoading = false;
   late Animation<double> _zoomAnimation;
   late Animation<Alignment> _positionAnimation;
   late Animation<double> _logoOpacityAnimation;
@@ -25,15 +28,15 @@ class _OlivaSplashPageState extends State<OlivaSplashPage>
   void initState() {
     super.initState();
     
-    // Initialize zoom animation controller - changed to 6 seconds
+    // Initialize zoom animation controller - optimized for speed
     _zoomController = AnimationController(
-      duration: const Duration(seconds: 6),
+      duration: const Duration(seconds: 2),
       vsync: this,
     );
 
     // Initialize logo animation controller
     _logoController = AnimationController(
-      duration: const Duration(seconds: 6),
+      duration: const Duration(seconds: 2),
       vsync: this,
     );
 
@@ -77,12 +80,35 @@ class _OlivaSplashPageState extends State<OlivaSplashPage>
     _zoomController.forward();
     _logoController.forward();
 
-    // Navigate after 15 seconds
-    Timer(const Duration(seconds: 7), () {
+    // Check session and navigate after 2 seconds (much faster)
+    Timer(const Duration(seconds: 2), () async {
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const IntroductionPage()),
-        );
+        try {
+          // Show loading indicator
+          setState(() {
+            _isLoading = true;
+          });
+          
+          // Check if user should stay logged in
+          final shouldStayLoggedIn = await SessionService.shouldStayLoggedIn();
+          
+          if (shouldStayLoggedIn) {
+            // User is already logged in, go to main app
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const MainDashboard()),
+            );
+          } else {
+            // User needs to login, go to introduction
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const IntroductionPage()),
+            );
+          }
+        } catch (e) {
+          // If there's an error, go to introduction page
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const IntroductionPage()),
+          );
+        }
       }
     });
   }
@@ -162,6 +188,14 @@ class _OlivaSplashPageState extends State<OlivaSplashPage>
                   ),
                 ),
               ),
+              // Loading indicator
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 20.0),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(kTealColor),
+                  ),
+                ),
             ],
           ),
         ),
