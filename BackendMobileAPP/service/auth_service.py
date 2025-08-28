@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import jwt, JWTError, ExpiredSignatureError
@@ -8,9 +8,14 @@ from typing import Optional, Dict, Any, List
 import random
 import uuid
 
-from models.otp import OTP
+# Import models in correct order to avoid SQLAlchemy mapping issues
+from models.session import UserSession, SessionLog
+from models.auth_models import RefreshToken, EnhancedUserSession, AuditLog, RateLimitLog
+from models.rbac_models import Role, Permission, UserPermission
 from models.user import User
+from models.otp import OTP
 from models.login_log import LoginLog
+
 from utils.password_utils import get_password_hash, verify_password
 from utils.sms_service import send_otp_sms
 from utils.email_utils import send_password_reset_email
@@ -22,21 +27,36 @@ from dto.user_register_dto import UserCreate
 from dto.user_resetpass_dto import PasswordResetRequest, ResetPasswordBody
 from dto.google_auth_dto import OAuthTokenRequest, OAuthUserResponse, OAuthProvider, OAuthUserProfile, \
     OAuthTokenResponse, OAuthLogoutRequest, OAuthSessionInfo
-from config import settings
+from config.settings import settings
+from service.security_service import SecurityService
 
 class AuthService:
     TOKEN_EXPIRATION_HOURS = 1
 
     def __init__(self, db: Session):
         self.db = db
+        self.security_service = SecurityService(db)
 
     def _create_token(self, subject: str, expires_hours: int = TOKEN_EXPIRATION_HOURS) -> str:
         """Generate JWT access token."""
-        payload = {
-            "sub": subject,
-            "exp": datetime.utcnow() + timedelta(hours=expires_hours)
-        }
-        return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        try:
+            print(f"🔍 DEBUG: _create_token called with subject: {subject}")
+            print(f"🔍 DEBUG: SECRET_KEY length: {len(settings.SECRET_KEY) if settings.SECRET_KEY else 'None'}")
+            print(f"🔍 DEBUG: ALGORITHM: {settings.ALGORITHM}")
+            
+            payload = {
+                "sub": subject,
+                "exp": datetime.utcnow() + timedelta(hours=expires_hours)
+            }
+            print(f"🔍 DEBUG: Payload created: {payload}")
+            
+            token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+            print(f"🔍 DEBUG: Token created successfully, length: {len(token)}")
+            return token
+        except Exception as e:
+            print(f"🔍 DEBUG: Error in _create_token: {e}")
+            print(f"🔍 DEBUG: Error type: {type(e)}")
+            raise
 
     def register_user(self, user: UserCreate) -> User:
         """Register a new user with email/password."""
@@ -59,7 +79,8 @@ class AuthService:
             self.db.rollback()
             raise HTTPException(status_code=500, detail="Registration failed")
 
-    def login_user(self, request_id: str, credentials: LoginRequest, ip: str) -> Dict[str, str]:
+    def login_user(self, request_id: str, credentials: LoginRequest, ip: str, 
+                   user_agent: str = None, device_info: str = None) -> Dict[str, str]:
         """Login user with email/password."""
         user = self.db.query(User).filter(
             (User.username == credentials.login) | (User.email == credentials.login)
@@ -68,6 +89,7 @@ class AuthService:
         success = user and verify_password(credentials.password, user.hashed_password)
         error_msg = None if success else "Invalid credentials"
 
+        # Log login attempt
         self.db.add(LoginLog(
             request_id=request_id,
             username=credentials.login,
@@ -78,11 +100,38 @@ class AuthService:
         self.db.commit()
 
         if not success:
+            # Log failed login attempt
+            self.security_service.log_audit_event(
+                user_id=user.id if user else None,
+                action="login_failed",
+                resource="/auth/login",
+                ip_address=ip,
+                user_agent=user_agent,
+                success=False,
+                error_message=error_msg
+            )
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
         try:
-            token = self._create_token(user.username)
-            return {"access_token": token, "token_type": "bearer"}
+            # Create refresh token instead of simple access token
+            token_response = self.security_service.create_refresh_token(
+                user_id=str(user.id),
+                device_info=device_info,
+                ip_address=ip,
+                user_agent=user_agent
+            )
+            
+            # Log successful login
+            self.security_service.log_audit_event(
+                user_id=str(user.id),
+                action="login_success",
+                resource="/auth/login",
+                ip_address=ip,
+                user_agent=user_agent,
+                success=True
+            )
+            
+            return token_response
         except Exception as e:
             raise HTTPException(status_code=500, detail="Token generation failed")
 
@@ -129,80 +178,143 @@ class AuthService:
         return {"message": "Password reset successfully"}
 
     async def authenticate_oauth(self, request_id: str, token_data: OAuthTokenRequest, ip: str) -> OAuthUserResponse:
-        """Authenticate user via OAuth."""
+        """Authenticate user with OAuth token."""
+        print(f"🔍 DEBUG: Google OAuth authentication started")
+        print(f"🔍 DEBUG: Token length: {len(token_data.token)}")
+        print(f"🔍 DEBUG: Token type: {token_data.token_type}")
+        print(f"🔍 DEBUG: Client ID: {settings.GOOGLE_CLIENT_ID}")
+
         try:
-            if token_data.provider == OAuthProvider.GOOGLE:
-                return await self._authenticate_google(request_id, token_data, ip)
-            raise HTTPException(status_code=400, detail=f"Unsupported OAuth provider: {token_data.provider}")
-        except ValueError as e:
-            raise HTTPException(status_code=401, detail="Invalid OAuth token")
+            if token_data.token_type == 'id_token':
+                # Handle ID token
+                idinfo = id_token.verify_oauth2_token(
+                    token_data.token,
+                    requests.Request(),
+                    settings.GOOGLE_CLIENT_ID
+                )
+                print(f"🔍 DEBUG: ID token verification successful")
+                print(f"🔍 DEBUG: Token info: {idinfo}")
+            elif token_data.token_type == 'access_token':
+                # Handle access token - get user info from Google OAuth2 API
+                print(f"🔍 DEBUG: Using access token to get user info")
+                headers = {'Authorization': f'Bearer {token_data.token}'}
+                
+                # Use single endpoint for faster response
+                endpoint = 'https://www.googleapis.com/oauth2/v2/userinfo'
+                
+                try:
+                    print(f"🔍 DEBUG: Trying endpoint: {endpoint}")
+                    import requests as http_requests
+                    
+                    # Use session for connection pooling
+                    session = http_requests.Session()
+                    response = session.get(endpoint, headers=headers, timeout=2)  # 2 second timeout
+                    session.close()  # Clean up session
+                    
+                    print(f"🔍 DEBUG: Response status: {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        idinfo = response.json()
+                        print(f"🔍 DEBUG: User info from access token: {idinfo}")
+                    else:
+                        print(f"🔍 DEBUG: Failed with status {response.status_code}: {response.text}")
+                        raise ValueError(f'Failed to get user info: {response.status_code}')
+                except Exception as e:
+                    print(f"🔍 DEBUG: Error with endpoint {endpoint}: {e}")
+                    raise ValueError(f'Failed to get user info: {e}')
+            else:
+                raise ValueError(f'Unsupported token type: {token_data.token_type}')
+                
         except Exception as e:
-            raise HTTPException(status_code=500, detail="OAuth authentication failed")
+            print(f"🔍 DEBUG: Token verification failed: {e}")
+            raise HTTPException(status_code=401, detail=f'Invalid token: {e}')
 
-    async def _authenticate_google(self, request_id: str, token_data: OAuthTokenRequest, ip: str) -> OAuthUserResponse:
-        """Authenticate Google OAuth token."""
-        idinfo = id_token.verify_oauth2_token(
-            token_data.token,
-            requests.Request(),
-            settings.GOOGLE_CLIENT_ID
-        )
+        # For access tokens, we don't have 'iss' field, so we skip that check
+        if token_data.token_type == 'id_token' and idinfo.get('iss') not in ['accounts.google.com', 'https://accounts.google.com']:
+            raise HTTPException(status_code=401, detail='Invalid issuer')
 
-        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Invalid issuer')
-
-        oauth_profile = OAuthUserProfile(
-            provider=OAuthProvider.GOOGLE,
-            provider_user_id=idinfo['sub'],
-            email=idinfo['email'],
-            email_verified=idinfo.get('email_verified', False),
-            name=idinfo.get('name', ''),
-            given_name=idinfo.get('given_name'),
-            family_name=idinfo.get('family_name'),
-            picture=idinfo.get('picture'),
-            locale=idinfo.get('locale'),
-            updated_at=datetime.utcnow()
-        )
-
-        user = self.db.query(User).filter(User.email == oauth_profile.email).first()
-        is_new_user = False
-
-        if not user:
-            user = User(
-                email=oauth_profile.email,
-                username=oauth_profile.email.split('@')[0],
-                full_name=oauth_profile.name,
-                profile_image_url=str(oauth_profile.picture) if oauth_profile.picture else None,
-                hashed_password=get_password_hash(''),
-                is_active=True
+        try:
+            oauth_profile = OAuthUserProfile(
+                provider=OAuthProvider.GOOGLE,
+                provider_user_id=idinfo['id'] if token_data.token_type == 'access_token' else idinfo['sub'],
+                email=idinfo['email'],
+                email_verified=idinfo.get('verified_email', False) if token_data.token_type == 'access_token' else idinfo.get('email_verified', False),
+                name=idinfo.get('name', ''),
+                given_name=idinfo.get('given_name'),
+                family_name=idinfo.get('family_name'),
+                picture=idinfo.get('picture'),
+                locale=idinfo.get('locale'),
+                updated_at=datetime.utcnow()
             )
+            print(f"🔍 DEBUG: OAuth profile created successfully: {oauth_profile.email}")
+        except Exception as e:
+            print(f"🔍 DEBUG: Error creating OAuth profile: {e}")
+            raise HTTPException(status_code=500, detail=f"Error creating OAuth profile: {e}")
 
-            self.db.add(user)
-            self.db.commit()
-            self.db.refresh(user)
-            is_new_user = True
+        try:
+            user = self.db.query(User).filter(User.email == oauth_profile.email).first()
+            is_new_user = False
+            print(f"🔍 DEBUG: User lookup result: {'Found' if user else 'Not found'}")
 
-        self.db.add(LoginLog(
-            request_id=request_id,
-            username=user.email,
-            ip_address=ip,
-            success=True,
-            error_message=None,
-        ))
-        self.db.commit()
+            if not user:
+                print(f"🔍 DEBUG: Creating new user for email: {oauth_profile.email}")
+                user = User(
+                    email=oauth_profile.email,
+                    username=oauth_profile.email.split('@')[0],
+                    full_name=oauth_profile.name,
+                    profile_image_url=str(oauth_profile.picture) if oauth_profile.picture else None,
+                    hashed_password=get_password_hash(''),
+                    is_active=True
+                )
 
-        access_token = self._create_token(user.username)
-        token_response = OAuthTokenResponse(
-            access_token=access_token,
-            expires_in=self.TOKEN_EXPIRATION_HOURS * 3600,
-            token_type="bearer"
-        )
+                self.db.add(user)
+                self.db.commit()
+                self.db.refresh(user)
+                is_new_user = True
+                print(f"🔍 DEBUG: New user created with ID: {user.id}")
+        except Exception as e:
+            print(f"🔍 DEBUG: Error in user creation/lookup: {e}")
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail=f"Error in user creation/lookup: {e}")
 
-        return OAuthUserResponse(
-            user=oauth_profile,
-            tokens=token_response,
-            is_new_user=is_new_user,
-            requires_additional_info=False
-        )
+        try:
+            # Skip login logging for faster response
+            print("🔍 DEBUG: Skipping login logging for speed")
+
+            print(f"🔍 DEBUG: Creating token for user: {user.username}")
+            
+            # Simplified token creation to avoid potential issues
+            payload = {
+                "sub": user.username,
+                "exp": datetime.utcnow() + timedelta(hours=self.TOKEN_EXPIRATION_HOURS)
+            }
+            access_token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+            print(f"🔍 DEBUG: Token created successfully, length: {len(access_token)}")
+            
+            # Skip session creation for faster response
+            print("🔍 DEBUG: Skipping session creation for speed")
+            
+            token_response = OAuthTokenResponse(
+                access_token=access_token,
+                expires_in=self.TOKEN_EXPIRATION_HOURS * 3600,
+                token_type="bearer"
+            )
+            print(f"🔍 DEBUG: Token response created successfully")
+
+            response = OAuthUserResponse(
+                user=oauth_profile,
+                tokens=token_response,
+                is_new_user=is_new_user,
+                requires_additional_info=False
+            )
+            print(f"🔍 DEBUG: OAuth response created successfully")
+            return response
+        except Exception as e:
+            print(f"🔍 DEBUG: Error in token creation: {e}")
+            print(f"🔍 DEBUG: Error type: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Error in token creation: {e}")
 
     async def logout_oauth(self, logout_request: OAuthLogoutRequest) -> Dict[str, Any]:
         """Logout OAuth user."""

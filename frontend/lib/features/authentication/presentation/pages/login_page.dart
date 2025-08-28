@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'unveil_registration_page.dart';
 import 'otp_verification_page.dart';
 import 'email_otp_page.dart';
+import 'setup_profile_page.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/widgets/auth_wrapper.dart';
 import '../widgets/login_header_widget.dart';
 import '../widgets/primary_button_widget.dart';
 import '../../../../services/api_service.dart';
+import '../../../dashboard/presentation/pages/newdashboard.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -17,6 +23,13 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
+  
+  // Google Sign-In instance
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile', 'openid'],
+    clientId: '601952184258-2e48qr0anivb3nm8dvil7jhiarg10j2d.apps.googleusercontent.com',
+    signInOption: SignInOption.standard,
+  );
 
   @override
   void dispose() {
@@ -81,6 +94,105 @@ class _LoginPageState extends State<LoginPage> {
       context,
       MaterialPageRoute(builder: (context) => const UnveilRegistrationPage()),
     );
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      _showLoadingDialog();
+      
+      // Clear any existing sign-in session first
+      await _googleSignIn.signOut();
+      print('🔍 Cleared existing Google Sign-In session');
+      
+      // Sign in with Google with timeout
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          print('🔍 Google Sign-In timeout');
+          throw Exception('Google Sign-In timed out. Please try again.');
+        },
+      );
+      
+      if (googleUser == null) {
+        _hideLoadingDialog();
+        if (mounted) {
+          _showErrorSnackBar('Google sign-in was cancelled');
+        }
+        print('🔍 User cancelled Google Sign-In');
+        return;
+      }
+
+      
+
+      // Get authentication
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      // Use access token if available, otherwise use ID token
+      String? accessToken;
+      
+      if (googleAuth.accessToken != null) {
+        accessToken = googleAuth.accessToken;
+
+      } else if (googleAuth.idToken != null) {
+        accessToken = googleAuth.idToken;
+
+      } else {
+        _hideLoadingDialog();
+        if (mounted) {
+          _showErrorSnackBar('No authentication tokens received from Google');
+        }
+        return;
+      }
+      
+      // Get the AuthService
+      final authService = Provider.of<AuthService>(context, listen: false);
+      
+      // Call the backend with the access token
+      final loginResult = await authService.signInWithGoogle(accessToken!);
+      
+      _hideLoadingDialog();
+      
+      if (loginResult['success']) {
+        // Successfully logged in - Navigate to NewDashboard
+
+        
+        // Show success message
+        if (mounted) {
+          final userName = loginResult['user']['name'] ?? 'User';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, $userName!'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          
+          // Navigate to AuthWrapper after successful login
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AuthWrapper(),
+              ),
+              (route) => false,
+            );
+          }
+        }
+      } else {
+        // Login failed - user might not exist
+
+        if (mounted) {
+          _showErrorSnackBar('Account not found. Please sign up first.');
+        }
+      }
+    } catch (e) {
+      _hideLoadingDialog();
+
+      if (mounted) {
+        _showErrorSnackBar('Error: ${e.toString()}');
+      }
+    }
   }
 
   Widget _buildActionButtons() {
@@ -197,6 +309,32 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Widget _buildGoogleSignInButton() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: OutlinedButton.icon(
+        onPressed: _handleGoogleSignIn,
+        icon: Image.asset('assets/images/google_logo.png', height: 24),
+        label: const Text(
+          'Login with Google',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A4D4A),
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFF00BFAE), width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPrivacyPolicy() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12),
@@ -281,6 +419,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 16),
                         _buildActionButtons(),
+                        const SizedBox(height: 16),
+                        _buildGoogleSignInButton(),
                       ],
                     ),
                   ),

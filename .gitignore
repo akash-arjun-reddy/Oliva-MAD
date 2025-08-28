@@ -38,6 +38,9 @@ MANIFEST
 build/
 *.lock
 
+# Allow frontend/lib directory
+!frontend/lib/
+
 # IDE
 .vscode/
 .idea/

@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 load_dotenv()
 
 # Database Configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://mobileapp:123@localhost:5432/mobileapp")
 ZENOTI_DATABASE_URL = os.getenv("ZENOTI_DATABASE_URL", DATABASE_URL)
 
 # Create SQLAlchemy engine
